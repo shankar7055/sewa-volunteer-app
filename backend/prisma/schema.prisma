@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("user") // admin, manager, user
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  createdVolunteers Volunteer[] @relation("CreatedBy")
+  updatedVolunteers Volunteer[] @relation("UpdatedBy")
+  recordedAttendances Attendance[] @relation("RecordedBy")
+  activities Activity[] @relation("ActivityRecordedBy")
+}
+
+model Volunteer {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  phone        String
+  address      String
+  skills       String[]
+  availability String[]
+  status       String   @default("pending") // active, inactive, pending
+  qrCode       String?  // Base64 encoded QR code image
+  qrCodeData   String?  // JSON data encoded in QR
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String?
+  updatedById  String?
+
+  // Relations
+  createdBy    User?        @relation("CreatedBy", fields: [createdById], references: [id])
+  updatedBy    User?        @relation("UpdatedBy", fields: [updatedById], references: [id])
+  attendances  Attendance[]
+  activities   Activity[]
+}
+
+model Attendance {
+  id           String    @id @default(uuid())
+  volunteerId  String
+  checkInTime  DateTime  @default(now())
+  checkOutTime DateTime?
+  duration     Int?      // Duration in minutes
+  status       String    @default("checked-in") // checked-in, checked-out
+  eventId      String?
+  recordedById String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  volunteer    Volunteer @relation(fields: [volunteerId], references: [id])
+  recordedBy   User?     @relation("RecordedBy", fields: [recordedById], references: [id])
+}
+
+model Activity {
+  id           String   @id @default(uuid())
+  type         String   // check-in, check-out, new-volunteer, volunteer-update
+  volunteerId  String?
+  details      String?
+  timestamp    DateTime @default(now())
+  recordedById String?
+
+  // Relations
+  volunteer    Volunteer? @relation(fields: [volunteerId], references: [id])
+  recordedBy   User?      @relation("ActivityRecordedBy", fields: [recordedById], references: [id])
+}
