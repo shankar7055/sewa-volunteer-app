@@ -1,150 +1,65 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { QrCode, Download, CloudDownload } from "lucide-react"
-
-interface Volunteer {
-  id: number
-  sewaCode: string
-  name: string
-  phone: string
-  sewaArea: string
-}
+import { Download, QrCode } from "lucide-react"
+import { useState } from "react"
 
 interface QRCodesTabProps {
-  volunteers: Volunteer[]
+  volunteers: any[]
   sewaAreas: Record<string, string>
 }
 
 export default function QRCodesTab({ volunteers, sewaAreas }: QRCodesTabProps) {
-  const [selectedArea, setSelectedArea] = useState("all")
-  const [filteredVolunteers, setFilteredVolunteers] = useState(volunteers)
+  const [filterArea, setFilterArea] = useState("")
 
-  useEffect(() => {
-    const filtered = selectedArea === "all" ? volunteers : volunteers.filter((v) => v.sewaArea === selectedArea)
-    setFilteredVolunteers(filtered)
-  }, [selectedArea, volunteers])
+  const filteredVolunteers = volunteers.filter((volunteer) => !filterArea || volunteer.sewaArea === filterArea)
 
-  const downloadQRCode = async (volunteer: Volunteer) => {
-    const qrData = JSON.stringify({
-      sewaCode: volunteer.sewaCode,
-      name: volunteer.name,
-      phone: volunteer.phone,
-      sewaArea: volunteer.sewaArea,
-      areaName: sewaAreas[volunteer.sewaArea],
-    })
-
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`
-
-    try {
-      const response = await fetch(qrUrl)
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `QR_${volunteer.sewaCode}_${volunteer.name.replace(/\s+/g, "_")}.png`
-      a.click()
-      window.URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error("Failed to download QR code:", error)
-      alert("Failed to download QR code. Please try again.")
-    }
+  const downloadQR = (volunteer: any) => {
+    // Mock QR download
+    console.log(`Downloading QR for ${volunteer.name}`)
   }
 
-  const downloadAllQRCodes = () => {
-    if (filteredVolunteers.length === 0) {
-      alert("No volunteers found for the selected area.")
-      return
-    }
-
-    // Download QR codes one by one with a delay
-    let index = 0
-    const downloadNext = () => {
-      if (index >= filteredVolunteers.length) return
-
-      const volunteer = filteredVolunteers[index]
-      downloadQRCode(volunteer)
-
-      index++
-      setTimeout(downloadNext, 500) // 500ms delay between downloads
-    }
-
-    downloadNext()
+  const downloadAllQRs = () => {
+    // Mock bulk download
+    console.log("Downloading all QR codes")
   }
 
   return (
     <div className="card">
-      <div className="card-header">
-        <h2>
-          <QrCode className="w-5 h-5" /> QR Code Generator
-        </h2>
-        <p>Generate unique QR codes for volunteers</p>
-      </div>
       <div className="card-content">
         <div className="qr-controls">
-          <select value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)}>
-            <option value="all">All Areas</option>
+          <select value={filterArea} onChange={(e) => setFilterArea(e.target.value)}>
+            <option value="">All Areas</option>
             {Object.entries(sewaAreas).map(([code, name]) => (
               <option key={code} value={code}>
-                {name}
+                {code} - {name}
               </option>
             ))}
           </select>
-          <button onClick={downloadAllQRCodes} className="download-all-btn">
-            <CloudDownload className="w-4 h-4" />
-            Download All
+          <button onClick={downloadAllQRs} className="download-all-btn">
+            <Download className="w-4 h-4" />
+            Download All QR Codes
           </button>
         </div>
 
         <div className="qr-codes-grid">
-          {filteredVolunteers.length > 0 ? (
-            filteredVolunteers.map((volunteer) => {
-              const qrData = JSON.stringify({
-                sewaCode: volunteer.sewaCode,
-                name: volunteer.name,
-                phone: volunteer.phone,
-                sewaArea: volunteer.sewaArea,
-                areaName: sewaAreas[volunteer.sewaArea],
-              })
-
-              const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`
-
-              return (
-                <div key={volunteer.id} className="qr-card">
-                  <div className="qr-image">
-                    <img
-                      src={qrUrl || "/placeholder.svg"}
-                      alt={`QR Code for ${volunteer.name}`}
-                      width="200"
-                      height="200"
-                      style={{ borderRadius: "8px" }}
-                    />
-                  </div>
-                  <div className="qr-info">
-                    <div className="volunteer-name-qr">
-                      <i className="fas fa-user"></i>
-                      {volunteer.name}
-                    </div>
-                    <div className="volunteer-details-qr">
-                      <div className="sewa-code">{volunteer.sewaCode}</div>
-                      <div>{volunteer.phone}</div>
-                    </div>
-                    <div className="area-badge">{sewaAreas[volunteer.sewaArea]}</div>
-                  </div>
-                  <button className="download-qr-btn" onClick={() => downloadQRCode(volunteer)}>
-                    <Download className="w-4 h-4" />
-                    Download QR
-                  </button>
+          {filteredVolunteers.map((volunteer) => (
+            <div key={volunteer.id} className="qr-card">
+              <div className="qr-image">
+                <QrCode className="w-16 h-16 text-gray-400" />
+              </div>
+              <div className="qr-info">
+                <div className="volunteer-name-qr">{volunteer.name}</div>
+                <div className="volunteer-details-qr">
+                  {volunteer.sewaCode} • {sewaAreas[volunteer.sewaArea]}
                 </div>
-              )
-            })
-          ) : (
-            <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "3rem", color: "#64748b" }}>
-              <QrCode style={{ fontSize: "3rem", marginBottom: "1rem", color: "#d1d5db" }} />
-              <p>No volunteers found for the selected area</p>
-              <p style={{ fontSize: "0.875rem" }}>Upload volunteers first to generate QR codes</p>
+                <div className="volunteer-details-qr">{volunteer.phone}</div>
+              </div>
+              <button onClick={() => downloadQR(volunteer)} className="download-qr-btn">
+                <Download className="w-4 h-4" />
+                Download QR
+              </button>
             </div>
-          )}
+          ))}
         </div>
       </div>
     </div>

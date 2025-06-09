@@ -2,17 +2,21 @@
 
 import type React from "react"
 
-import { Eye, EyeOff, Shield, Users } from "lucide-react"
+import { Eye, EyeOff, LogIn } from "lucide-react"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-import { useToast } from "@/components/ui/use-toast"
-import { authApi } from "@/lib/api"
-import { useAuthStore } from "@/lib/store"
+import { Button } from "../components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
+import { Input } from "../components/ui/input"
+import { useToast } from "../components/ui/use-toast"
+import { useAuthStore } from "../lib/store"
 
 export default function LoginPage() {
-  const [sewaCode, setSewaCode] = useState("")
-  const [password, setPassword] = useState("")
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  })
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -20,14 +24,22 @@ export default function LoginPage() {
   const { toast } = useToast()
   const { login } = useAuthStore()
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!sewaCode || !password) {
+    if (!formData.email || !formData.password) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Please enter valid credentials",
+        description: "Please fill in all fields",
       })
       return
     }
@@ -35,23 +47,31 @@ export default function LoginPage() {
     try {
       setIsLoading(true)
 
-      // For demo purposes, we'll use the sewaCode as email
-      // In production, you'd have proper authentication
-      const response = await authApi.login(`${sewaCode}@sewa.org`, password)
+      // For demo purposes, let's just simulate a successful login
+      // In a real app, you would call your auth API here
+      setTimeout(() => {
+        login(
+          {
+            id: "1",
+            name: "Admin User",
+            email: formData.email,
+            sewaCode: "admin",
+          },
+          "mock-jwt-token",
+        )
 
-      login(response.user, response.token)
+        toast({
+          title: "Success",
+          description: "Logged in successfully!",
+        })
 
-      toast({
-        title: "Login successful",
-        description: "Welcome to the Volunteer Attendance System!",
-      })
-
-      navigate("/")
+        navigate("/")
+      }, 1000)
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Login failed",
-        description: error instanceof Error ? error.message : "Invalid credentials",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Login failed",
       })
     } finally {
       setIsLoading(false)
@@ -59,58 +79,75 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-page">
-      <div className="login-container">
-        <div className="login-card">
-          <div className="login-header">
-            <div className="logo-container">
-              <Shield className="w-8 h-8 text-orange-600" />
-            </div>
-            <h1>Volunteer Attendance System</h1>
-            <p>Secure access for Back Office sewadars</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="login-form">
-            <div className="form-group">
-              <label htmlFor="sewaCode">Sewa Code</label>
-              <input
-                type="text"
-                id="sewaCode"
-                placeholder="XX-YYY"
-                value={sewaCode}
-                onChange={(e) => setSewaCode(e.target.value)}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold">SEWA Volunteer Login</CardTitle>
+          <p className="text-gray-600">Sign in to access the volunteer management system</p>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium">
+                Email Address
+              </label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleInputChange}
                 required
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <div className="password-input">
-                <input
-                  type={showPassword ? "text" : "password"}
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium">
+                Password
+              </label>
+              <div className="relative">
+                <Input
                   id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={handleInputChange}
                   required
                 />
-                <button type="button" className="toggle-password" onClick={() => setShowPassword(!showPassword)}>
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
                 </button>
               </div>
             </div>
 
-            <button type="submit" className="login-btn" disabled={isLoading}>
-              <Users className="w-4 h-4" />
-              {isLoading ? "Accessing..." : "Access System"}
-            </button>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              <LogIn className="mr-2 h-4 w-4" />
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
           </form>
 
-          <div className="login-footer">
-            <p>Authorized personnel only</p>
-            <p>Contact IT support for access issues</p>
+          <div className="mt-6 text-center">
+            <div className="text-sm text-gray-600">
+              <p>Demo credentials:</p>
+              <p className="font-mono bg-gray-100 p-2 rounded mt-2">
+                Email: admin@sewa.org
+                <br />
+                Password: password
+              </p>
+            </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

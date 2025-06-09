@@ -1,182 +1,127 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { Search, UserCheck, UserX } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { useState } from "react"
+
+// Define types locally
+type SewaAreaCode = "01" | "02" | "03" | "04" | "05" | "06" | "07"
 
 interface Volunteer {
-  id: number
-  sewaCode: string
+  id: string
   name: string
+  email: string
   phone: string
-  sewaArea: string
-  isPresent: boolean
-  checkInTime?: string
+  sewaCode: string
+  sewaArea: SewaAreaCode
+  status: "active" | "inactive" | "pending"
+  createdAt: string
+  isPresent?: boolean
 }
 
 interface VolunteersTabProps {
   volunteers: Volunteer[]
-  sewaAreas: Record<string, string>
+  sewaAreas: Record<SewaAreaCode, string>
 }
 
-export default function VolunteersTab({ volunteers: initialVolunteers, sewaAreas }: VolunteersTabProps) {
-  const [volunteers, setVolunteers] = useState<Volunteer[]>(initialVolunteers)
-  const [filteredVolunteers, setFilteredVolunteers] = useState<Volunteer[]>(initialVolunteers)
+export default function VolunteersTab({ volunteers, sewaAreas }: VolunteersTabProps) {
   const [searchTerm, setSearchTerm] = useState("")
-  const [areaFilter, setAreaFilter] = useState("all")
-  const [statusFilter, setStatusFilter] = useState("all")
+  const [filterArea, setFilterArea] = useState("")
 
-  const { toast } = useToast()
-
-  useEffect(() => {
-    filterVolunteers()
-  }, [searchTerm, areaFilter, statusFilter, volunteers])
-
-  const filterVolunteers = () => {
-    const filtered = volunteers.filter((volunteer) => {
-      const matchesSearch =
-        volunteer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        volunteer.sewaCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        volunteer.phone.includes(searchTerm)
-
-      const matchesArea = areaFilter === "all" || volunteer.sewaArea === areaFilter
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "present" && volunteer.isPresent) ||
-        (statusFilter === "absent" && !volunteer.isPresent)
-
-      return matchesSearch && matchesArea && matchesStatus
-    })
-
-    setFilteredVolunteers(filtered)
-  }
-
-  const toggleAttendance = (volunteerId: number) => {
-    setVolunteers((prev) =>
-      prev.map((volunteer) => {
-        if (volunteer.id === volunteerId) {
-          const isPresent = !volunteer.isPresent
-          const checkInTime = isPresent
-            ? new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-            : undefined
-
-          return { ...volunteer, isPresent, checkInTime }
-        }
-        return volunteer
-      }),
-    )
-
-    toast({
-      title: "Attendance Updated",
-      description: "Volunteer attendance status has been updated",
-    })
-  }
-
-  const manualCheckIn = (volunteerId: number) => {
-    const volunteer = volunteers.find((v) => v.id === volunteerId)
-    if (volunteer && !volunteer.isPresent) {
-      toggleAttendance(volunteerId)
-    }
-  }
+  const filteredVolunteers = volunteers.filter((volunteer) => {
+    const matchesSearch =
+      volunteer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      volunteer.sewaCode.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesArea = !filterArea || volunteer.sewaArea === filterArea
+    return matchesSearch && matchesArea
+  })
 
   return (
-    <div className="card">
-      <div className="card-header">
-        <h2>Volunteer Management</h2>
-        <p>View and manage all registered volunteers</p>
-      </div>
-      <div className="card-content">
-        <div className="table-controls">
-          <div className="search-box">
-            <Search className="w-4 h-4" />
+    <div className="bg-white rounded-lg shadow">
+      <div className="p-6">
+        <div className="flex space-x-4 mb-6">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by name, Sewa Code, or phone..."
+              placeholder="Search volunteers..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <select value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
-            <option value="all">All Areas</option>
+          <select
+            value={filterArea}
+            onChange={(e) => setFilterArea(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Areas</option>
             {Object.entries(sewaAreas).map(([code, name]) => (
               <option key={code} value={code}>
-                {name}
+                {code} - {name}
               </option>
             ))}
           </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="all">All Status</option>
-            <option value="present">Present</option>
-            <option value="absent">Absent</option>
-          </select>
         </div>
 
-        <div className="results-count">
+        <div className="text-sm text-gray-600 mb-4">
           Showing {filteredVolunteers.length} of {volunteers.length} volunteers
         </div>
 
-        <div className="table-container">
-          <table>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
-              <tr>
-                <th>Sewa Code</th>
-                <th>Name</th>
-                <th>Phone</th>
-                <th>Sewa Area</th>
-                <th>Status</th>
-                <th>Check-in Time</th>
-                <th>Actions</th>
+              <tr className="border-b">
+                <th className="text-left p-4 font-medium">Sewa Code</th>
+                <th className="text-left p-4 font-medium">Name</th>
+                <th className="text-left p-4 font-medium">Phone</th>
+                <th className="text-left p-4 font-medium">Sewa Area</th>
+                <th className="text-left p-4 font-medium">Status</th>
+                <th className="text-left p-4 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredVolunteers.length > 0 ? (
-                filteredVolunteers.map((volunteer) => (
-                  <tr key={volunteer.id}>
-                    <td>
-                      <span className="sewa-code">{volunteer.sewaCode}</span>
-                    </td>
-                    <td>
-                      <strong>{volunteer.name}</strong>
-                    </td>
-                    <td>
-                      <i className="fas fa-phone" style={{ marginRight: "0.5rem", color: "#64748b" }}></i>
-                      {volunteer.phone}
-                    </td>
-                    <td>
-                      <span className="area-badge">{sewaAreas[volunteer.sewaArea]}</span>
-                    </td>
-                    <td>
-                      <span className={`status-badge ${volunteer.isPresent ? "status-present" : "status-absent"}`}>
-                        {volunteer.isPresent ? <UserCheck className="w-3 h-3" /> : <UserX className="w-3 h-3" />}
-                        {volunteer.isPresent ? "Present" : "Absent"}
-                      </span>
-                    </td>
-                    <td>
-                      {volunteer.checkInTime ? (
-                        <span className="sewa-code">{volunteer.checkInTime}</span>
+              {filteredVolunteers.map((volunteer) => (
+                <tr key={volunteer.id} className="border-b hover:bg-gray-50">
+                  <td className="p-4">
+                    <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">{volunteer.sewaCode}</span>
+                  </td>
+                  <td className="p-4 font-medium">{volunteer.name}</td>
+                  <td className="p-4">{volunteer.phone}</td>
+                  <td className="p-4">
+                    <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                      {volunteer.sewaArea} - {sewaAreas[volunteer.sewaArea]}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <span
+                      className={`inline-flex items-center space-x-1 text-sm px-2 py-1 rounded ${
+                        volunteer.isPresent ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {volunteer.isPresent ? (
+                        <>
+                          <UserCheck className="w-3 h-3" />
+                          <span>Present</span>
+                        </>
                       ) : (
-                        <span style={{ color: "#9ca3af" }}>-</span>
+                        <>
+                          <UserX className="w-3 h-3" />
+                          <span>Absent</span>
+                        </>
                       )}
-                    </td>
-                    <td>
-                      {!volunteer.isPresent && (
-                        <button className="action-btn btn-checkin" onClick={() => manualCheckIn(volunteer.id)}>
-                          <UserCheck className="w-3 h-3" /> Check In
-                        </button>
-                      )}
-                      <button className="action-btn btn-toggle" onClick={() => toggleAttendance(volunteer.id)}>
-                        {volunteer.isPresent ? "Mark Absent" : "Mark Present"}
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={7} style={{ textAlign: "center", padding: "2rem", color: "#64748b" }}>
-                    No volunteers found matching your criteria
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <button className="text-sm bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 mr-2">
+                      <UserCheck className="w-3 h-3 inline mr-1" />
+                      Check In
+                    </button>
+                    <button className="text-sm bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700">
+                      Toggle Status
+                    </button>
                   </td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </table>
         </div>
