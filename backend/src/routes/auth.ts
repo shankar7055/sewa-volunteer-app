@@ -1,8 +1,8 @@
-import express from "express"
 import bcrypt from "bcrypt"
+import express from "express"
 import jwt from "jsonwebtoken"
-import { prisma } from "../app"
-import { authenticateToken } from "../middleware/auth"
+import { prisma } from "../app.js"
+import { authenticateToken } from "../middleware/auth.js"
 
 const router = express.Router()
 

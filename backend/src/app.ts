@@ -1,13 +1,13 @@
-import express from "express"
+import { PrismaClient } from "@prisma/client"
 import cors from "cors"
 import dotenv from "dotenv"
-import { PrismaClient } from "@prisma/client"
+import express from "express"
 
 // Import routes
-import authRoutes from "./routes/auth"
-import volunteerRoutes from "./routes/volunteers"
-import attendanceRoutes from "./routes/attendance"
-import dashboardRoutes from "./routes/dashboard"
+import attendanceRoutes from "./routes/attendance.js"
+import authRoutes from "./routes/auth.js"
+import dashboardRoutes from "./routes/dashboard.js"
+import volunteerRoutes from "./routes/volunteers.js"
 
 // Load environment variables
 dotenv.config()

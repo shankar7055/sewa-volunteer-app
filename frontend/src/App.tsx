@@ -1,5 +1,5 @@
 import type React from "react"
-import { Navigate, Route, Routes, useLocation } from "react-router-dom"
+import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom"
 import { Toaster } from "./components/ui/toaster"
 import { useAuthStore } from "./lib/store"
 
@@ -87,9 +87,9 @@ function Layout({ children }: { children: React.ReactNode }) {
             const Icon = item.icon
             const isActive = location.pathname === item.href
             return (
-              <a
+              <Link
                 key={item.name}
-                href={item.href}
+                to={item.href}
                 className={cn(
                   "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
                   isActive ? "bg-blue-600 text-white" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100",
@@ -97,7 +97,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               >
                 <Icon />
                 <span className="ml-3">{item.name}</span>
-              </a>
+              </Link>
             )
           })}
         </nav>
@@ -141,23 +141,23 @@ import VolunteerDetailPage from "./pages/volunteer-detail"
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuthStore()
 
-  // For development, we'll comment this out for now
-  // If you want to enable authentication, uncomment these lines
-  // if (!isAuthenticated) {
-  //   return <Navigate to="/login" replace />
-  // }
+  // Enable authentication check
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
 
   return <Layout>{children}</Layout>
 }
 
 function App() {
   console.log("App component is rendering")
+  const { isAuthenticated } = useAuthStore()
 
   return (
     <div className="app">
       <Routes>
-        {/* Auth routes */}
-        <Route path="/login" element={<LoginPage />} />
+        {/* Auth routes - redirect to dashboard if already logged in */}
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} />
 
         {/* Protected routes */}
         <Route
@@ -205,8 +205,8 @@ function App() {
           }
         />
 
-        {/* Redirect any other routes to dashboard */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Redirect any other routes based on auth status */}
+        <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
       </Routes>
 
       <Toaster />

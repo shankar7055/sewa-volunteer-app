@@ -1,6 +1,6 @@
 import express from "express"
-import { prisma } from "../app"
-import { authenticateToken } from "../middleware/auth"
+import { prisma } from "../app.js"
+import { authenticateToken } from "../middleware/auth.js"
 
 const router = express.Router()
 

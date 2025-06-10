@@ -17,11 +17,23 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       isAuthenticated: false,
-      login: (user, token) => set({ user, token, isAuthenticated: true }),
-      logout: () => set({ user: null, token: null, isAuthenticated: false }),
+      login: (user, token) => {
+        set({ user, token, isAuthenticated: true })
+      },
+      logout: () => {
+        set({ user: null, token: null, isAuthenticated: false })
+        // Clear localStorage
+        localStorage.removeItem("auth-storage")
+      },
     }),
     {
       name: "auth-storage",
+      // Add proper rehydration
+      onRehydrateStorage: () => (state) => {
+        if (state?.token && state?.user) {
+          state.isAuthenticated = true
+        }
+      },
     },
   ),
 )

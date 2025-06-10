@@ -1,7 +1,7 @@
 import express from "express"
-import { prisma } from "../app"
-import { authenticateToken, requireManagerOrAdmin } from "../middleware/auth"
-import { generateQRCode } from "../services/qrService"
+import { prisma } from "../app.js"
+import { authenticateToken, requireManagerOrAdmin } from "../middleware/auth.js"
+import { generateQRCode } from "../services/qrService.js"
 
 const router = express.Router()
 

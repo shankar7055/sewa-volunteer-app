@@ -10,6 +10,7 @@ import { Button } from "../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Input } from "../components/ui/input"
 import { useToast } from "../components/ui/use-toast"
+import { authApi } from "../lib/api"
 import { useAuthStore } from "../lib/store"
 
 export default function LoginPage() {
@@ -47,26 +48,17 @@ export default function LoginPage() {
     try {
       setIsLoading(true)
 
-      // For demo purposes, let's just simulate a successful login
-      // In a real app, you would call your auth API here
-      setTimeout(() => {
-        login(
-          {
-            id: "1",
-            name: "Admin User",
-            email: formData.email,
-            sewaCode: "admin",
-          },
-          "mock-jwt-token",
-        )
+      // Use the real auth API
+      const { user, token } = await authApi.login(formData.email, formData.password)
 
-        toast({
-          title: "Success",
-          description: "Logged in successfully!",
-        })
+      login(user, token)
 
-        navigate("/")
-      }, 1000)
+      toast({
+        title: "Success",
+        description: "Logged in successfully!",
+      })
+
+      navigate("/")
     } catch (error) {
       toast({
         variant: "destructive",
