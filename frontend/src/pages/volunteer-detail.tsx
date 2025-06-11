@@ -1,28 +1,28 @@
 "use client"
 
 import {
-    ArrowLeft,
-    Calendar,
-    CheckCircle,
-    Edit,
-    Mail,
-    MapPin,
-    Phone,
-    QrCode,
-    Trash2,
-    User,
-    XCircle,
+  ArrowLeft,
+  Calendar,
+  CheckCircle,
+  Edit,
+  Mail,
+  MapPin,
+  Phone,
+  QrCode,
+  Trash2,
+  User,
+  XCircle,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useToast } from "@/components/ui/use-toast"
+import { Badge } from "../components/ui/badge"
+import { Button } from "../components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
+import { useToast } from "../components/ui/use-toast"
 
-import { volunteersApi } from "@/lib/api"
-import { useVolunteersStore } from "@/lib/store"
+import { volunteersApi } from "../lib/api"
+import { useVolunteersStore } from "../lib/store"
 
 // Define the sewa area type
 type SewaAreaCode = "01" | "02" | "03" | "04" | "05" | "06" | "07"

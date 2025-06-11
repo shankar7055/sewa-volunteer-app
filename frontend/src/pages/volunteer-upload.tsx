@@ -15,6 +15,7 @@ import { useToast } from "../components/ui/use-toast"
 
 import { volunteersApi } from "../lib/api"
 import { useVolunteersStore } from "../lib/store"
+import { volunteerStorage } from "../lib/volunteer-storage"
 import { SEWA_AREAS, type SewaAreaCode } from "../types/volunteer"
 
 interface ParsedVolunteer {
@@ -23,6 +24,7 @@ interface ParsedVolunteer {
   phone: string
   sewaArea: SewaAreaCode
   sewaCode?: string
+  rowIndex?: number
 }
 
 export default function VolunteerUploadPage() {
@@ -38,7 +40,7 @@ export default function VolunteerUploadPage() {
 
   const navigate = useNavigate()
   const { toast } = useToast()
-  const { volunteers, setVolunteers } = useVolunteersStore()
+  const { setVolunteers } = useVolunteersStore()
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -50,13 +52,14 @@ export default function VolunteerUploadPage() {
 
     // Parse Excel file for preview
     try {
+      console.log("📊 Reading Excel file:", selectedFile.name)
       const buffer = await selectedFile.arrayBuffer()
       const workbook = XLSX.read(buffer, { type: "array" })
       const sheetName = workbook.SheetNames[0]
       const sheet = workbook.Sheets[sheetName]
       const data = XLSX.utils.sheet_to_json(sheet) as any[]
 
-      console.log("Raw Excel data:", data)
+      console.log("📊 Raw Excel data:", data)
 
       const parsed = data
         .map((row, index) => {
@@ -77,7 +80,7 @@ export default function VolunteerUploadPage() {
         })
         .filter((item) => item.name && item.email) // Filter out empty rows
 
-      console.log("Parsed data:", parsed)
+      console.log("📊 Parsed volunteer data:", parsed)
       setPreviewData(parsed)
 
       toast({
@@ -85,7 +88,7 @@ export default function VolunteerUploadPage() {
         description: `Found ${parsed.length} valid volunteer records`,
       })
     } catch (error) {
-      console.error("Error parsing Excel file:", error)
+      console.error("❌ Error parsing Excel file:", error)
       toast({
         variant: "destructive",
         title: "Parse Error",
@@ -95,8 +98,10 @@ export default function VolunteerUploadPage() {
   }
 
   const generateSewaCode = (sewaArea: SewaAreaCode, index: number): string => {
+    // Get current timestamp to make codes unique
+    const timestamp = Date.now().toString().slice(-4)
     const paddedIndex = String(index + 1).padStart(3, "0")
-    return `${sewaArea}-${paddedIndex}`
+    return `${sewaArea}-${paddedIndex}-${timestamp}`
   }
 
   const handleUpload = async () => {
@@ -109,15 +114,26 @@ export default function VolunteerUploadPage() {
     const results = { successful: 0, failed: 0, errors: [] as string[] }
 
     try {
-      // Process volunteers in batches
+      console.log("📤 Starting volunteer upload process...")
+      console.log("📤 Will upload", previewData.length, "volunteers")
+
+      // Check current storage state before upload
+      console.log("📊 Storage state BEFORE upload:", volunteerStorage.getCount())
+      volunteerStorage.debugStorage()
+
+      // Process volunteers one by one
       for (let i = 0; i < previewData.length; i++) {
         const volunteerData = previewData[i]
 
         try {
-          // Generate sewa code
+          // Generate unique sewa code
           const sewaCode = generateSewaCode(volunteerData.sewaArea, i)
 
-          console.log(`Creating volunteer ${i + 1}:`, { ...volunteerData, sewaCode })
+          console.log(`📤 Creating volunteer ${i + 1}/${previewData.length}:`, {
+            name: volunteerData.name,
+            email: volunteerData.email,
+            sewaCode,
+          })
 
           const newVolunteer = await volunteersApi.create({
             ...volunteerData,
@@ -125,13 +141,13 @@ export default function VolunteerUploadPage() {
             status: "active",
           })
 
-          console.log(`Successfully created volunteer:`, newVolunteer)
+          console.log(`✅ Successfully created volunteer:`, newVolunteer.name)
           results.successful++
         } catch (error) {
-          console.error(`Failed to create volunteer ${volunteerData.name}:`, error)
+          console.error(`❌ Failed to create volunteer ${volunteerData.name}:`, error)
           results.failed++
           results.errors.push(
-            `Row ${(volunteerData as any).rowIndex}: ${volunteerData.name} - ${error instanceof Error ? error.message : "Unknown error"}`,
+            `Row ${volunteerData.rowIndex}: ${volunteerData.name} - ${error instanceof Error ? error.message : "Unknown error"}`,
           )
         }
 
@@ -141,11 +157,17 @@ export default function VolunteerUploadPage() {
         setUploadResults({ ...results })
 
         // Small delay to show progress
-        await new Promise((resolve) => setTimeout(resolve, 100))
+        await new Promise((resolve) => setTimeout(resolve, 50))
       }
 
-      // Refresh volunteers list
-      const allVolunteers = await volunteersApi.getAll()
+      // Check storage state after upload
+      console.log("📊 Storage state AFTER upload:", volunteerStorage.getCount())
+      volunteerStorage.debugStorage()
+
+      // Refresh volunteers list from storage (not API to avoid confusion)
+      console.log("🔄 Refreshing volunteer list from storage...")
+      const allVolunteers = volunteerStorage.getAll()
+      console.log("📋 Updated volunteer list from storage:", allVolunteers.length, "volunteers")
       setVolunteers(allVolunteers)
 
       toast({
@@ -153,8 +175,15 @@ export default function VolunteerUploadPage() {
         description: `Successfully uploaded ${results.successful} volunteers. ${results.failed} failed.`,
         variant: results.failed > 0 ? "destructive" : "default",
       })
+
+      // Navigate back to volunteers page after successful upload
+      if (results.successful > 0) {
+        setTimeout(() => {
+          navigate("/volunteers")
+        }, 2000)
+      }
     } catch (error) {
-      console.error("Upload error:", error)
+      console.error("❌ Upload error:", error)
       toast({
         variant: "destructive",
         title: "Upload Failed",
@@ -166,7 +195,7 @@ export default function VolunteerUploadPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Button variant="outline" size="icon" onClick={() => navigate("/volunteers")}>
           <ArrowLeft className="h-4 w-4" />
