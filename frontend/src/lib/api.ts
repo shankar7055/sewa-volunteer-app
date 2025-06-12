@@ -1,4 +1,5 @@
 import type { DashboardStats, SewaAreaCode, User, Volunteer } from "../types/volunteer"
+import { generateQRDataUrl } from "./qr-utils"
 import { volunteerStorage } from "./volunteer-storage"
 
 // Mock API functions for development
@@ -130,17 +131,89 @@ export const volunteersApi = {
     return { success: true }
   },
 
-  async generateQR(id: string): Promise<{ qrCode: string }> {
+  // Enhanced QR generation - returns data URL instead of simple string
+  async generateQR(id: string): Promise<string> {
     await delay(500)
-    return { qrCode: `QR-${id}-${Date.now()}` }
+
+    try {
+      // Get volunteer data
+      const volunteer = volunteerStorage.findById(id)
+      if (!volunteer) {
+        throw new Error("Volunteer not found")
+      }
+
+      // Generate QR code with volunteer data
+      const qrData = JSON.stringify({
+        id: volunteer.id,
+        code: volunteer.sewaCode,
+        name: volunteer.name,
+        timestamp: Date.now(),
+      })
+
+      // Generate actual QR code as data URL
+      const qrDataUrl = await generateQRDataUrl(qrData)
+
+      console.log("✅ QR code generated successfully for:", volunteer.name)
+      return qrDataUrl
+    } catch (error) {
+      console.error("❌ Error generating QR code:", error)
+      throw new Error("Failed to generate QR code")
+    }
+  },
+
+  // Generate QR codes for multiple volunteers
+  async generateBulkQRs(volunteerIds: string[]): Promise<string[]> {
+    await delay(500)
+
+    try {
+      const qrDataUrls: string[] = []
+
+      for (const id of volunteerIds) {
+        const qrDataUrl = await this.generateQR(id)
+        qrDataUrls.push(qrDataUrl)
+      }
+
+      console.log("✅ Bulk QR codes generated successfully for", volunteerIds.length, "volunteers")
+      return qrDataUrls
+    } catch (error) {
+      console.error("❌ Error generating bulk QR codes:", error)
+      throw new Error("Failed to generate bulk QR codes")
+    }
   },
 
   async recordAttendance(qrData: string): Promise<{ success: boolean; volunteerName: string; timestamp: string }> {
     await delay(300)
-    return {
-      success: true,
-      volunteerName: "Mock Volunteer",
-      timestamp: new Date().toISOString(),
+
+    try {
+      // Parse QR data
+      const parsedData = JSON.parse(qrData)
+      const volunteer = volunteerStorage.findById(parsedData.id)
+
+      if (!volunteer) {
+        throw new Error("Volunteer not found")
+      }
+
+      // Update attendance
+      const updatedVolunteer = volunteerStorage.update(parsedData.id, { isPresent: true })
+
+      if (!updatedVolunteer) {
+        throw new Error("Failed to update attendance")
+      }
+
+      updateStats()
+
+      return {
+        success: true,
+        volunteerName: volunteer.name,
+        timestamp: new Date().toISOString(),
+      }
+    } catch (error) {
+      console.error("❌ Error recording attendance:", error)
+      return {
+        success: false,
+        volunteerName: "Unknown",
+        timestamp: new Date().toISOString(),
+      }
     }
   },
 

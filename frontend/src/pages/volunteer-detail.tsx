@@ -4,12 +4,13 @@ import {
   ArrowLeft,
   Calendar,
   CheckCircle,
+  Download,
   Edit,
   Mail,
   MapPin,
   Phone,
-  QrCode,
   Trash2,
+  Upload,
   User,
   XCircle,
 } from "lucide-react"
@@ -19,9 +20,12 @@ import { useNavigate, useParams } from "react-router-dom"
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog"
 import { useToast } from "../components/ui/use-toast"
 
+import { QRCodeButton } from "../components/qr-code-button"
 import { volunteersApi } from "../lib/api"
+import { downloadQR } from "../lib/qr-utils"
 import { useVolunteersStore } from "../lib/store"
 
 // Define the sewa area type
@@ -45,6 +49,9 @@ export default function VolunteerDetailPage() {
 
   const [volunteer, setVolunteer] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false)
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null)
+  const [showQRDialog, setShowQRDialog] = useState(false)
 
   useEffect(() => {
     const loadVolunteer = async () => {
@@ -103,7 +110,13 @@ export default function VolunteerDetailPage() {
     if (!volunteer) return
 
     try {
-      await volunteersApi.generateQR(volunteer.id)
+      setIsGeneratingQR(true)
+
+      // Generate QR code
+      const dataUrl = await volunteersApi.generateQR(volunteer.id)
+      setQrCodeDataUrl(dataUrl)
+      setShowQRDialog(true)
+
       toast({
         title: "Success",
         description: "QR code generated successfully",
@@ -114,7 +127,22 @@ export default function VolunteerDetailPage() {
         title: "Error",
         description: "Failed to generate QR code",
       })
+    } finally {
+      setIsGeneratingQR(false)
     }
+  }
+
+  const handleDownloadQR = () => {
+    if (!qrCodeDataUrl || !volunteer) return
+
+    // Download the QR code
+    const fileName = `volunteer-${volunteer.sewaCode}-qr.png`
+    downloadQR(qrCodeDataUrl, fileName)
+
+    toast({
+      title: "Success",
+      description: "QR code downloaded successfully",
+    })
   }
 
   if (isLoading) {
@@ -165,14 +193,20 @@ export default function VolunteerDetailPage() {
         </div>
 
         <div className="flex space-x-2">
+          <Button variant="outline" onClick={() => navigate("/volunteer-upload")}>
+            <Upload className="mr-2 h-4 w-4" />
+            Upload
+          </Button>
           <Button variant="outline" onClick={() => navigate(`/volunteers/${volunteer.id}/edit`)}>
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </Button>
-          <Button variant="outline" onClick={handleGenerateQR}>
-            <QrCode className="mr-2 h-4 w-4" />
-            Generate QR
-          </Button>
+          <QRCodeButton
+            volunteerId={volunteer.id}
+            volunteerCode={volunteer.sewaCode}
+            size="default"
+            variant="outline"
+          />
           <Button variant="destructive" onClick={handleDelete}>
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
@@ -316,6 +350,36 @@ export default function VolunteerDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* QR Code Dialog */}
+      <Dialog open={showQRDialog} onOpenChange={setShowQRDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Volunteer QR Code</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center space-y-4 p-4">
+            {qrCodeDataUrl && (
+              <div className="border p-4 rounded-lg bg-white">
+                <img
+                  src={qrCodeDataUrl || "/placeholder.svg"}
+                  alt="Volunteer QR Code"
+                  className="w-64 h-64 object-contain"
+                />
+              </div>
+            )}
+            <div className="text-center space-y-2">
+              <p className="text-sm text-gray-500">
+                QR Code for: <span className="font-medium">{volunteer.name}</span>
+              </p>
+              <p className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">{volunteer.sewaCode}</p>
+            </div>
+            <Button onClick={handleDownloadQR} className="w-full">
+              <Download className="mr-2 h-4 w-4" />
+              Download QR Code
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
